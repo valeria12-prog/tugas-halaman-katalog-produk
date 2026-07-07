@@ -1,13 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { products } from './data/products';
+// Remove static import, keep as fallback only
+import { products as fallbackProducts } from './data/products';
 import ProductList from './components/ProductList';
 import CartSidebar from './components/CartSidebar';
 import CheckoutForm from './components/CheckoutForm';
 
 function App() {
+  // State untuk data dari API
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [keranjang, setKeranjang] = useState([]);
   const [cari, setCari] = useState('');
   const [filterKategori, setFilterKategori] = useState('Semua');
+
+  // Fetch data dari Fake Store API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('https://fakestoreapi.com/products');
+        if (!res.ok) throw new Error('Gagal mengambil data produk');
+        const data = await res.json();
+
+        // Sesuaikan nama field API agar cocok dengan kode lama
+        const formattedData = data.map(item => ({
+          id: item.id,
+          nama: item.title,               // API: title → dipakai sebagai "nama"
+          harga: Math.round(item.price * 15000), // Konversi USD ke Rupiah
+          kategori: item.category,        // API: category → dipakai sebagai "kategori"
+          deskripsi: item.description,     // API: description
+          gambar: item.image               // API: image → dipakai sebagai "gambar"
+        }));
+
+        setProducts(formattedData);
+      } catch (err) {
+        console.error(err);
+        setError('Tidak dapat memuat data dari server, menampilkan data cadangan.');
+        setProducts(fallbackProducts); // Pakai data lama jika API gagal
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   useEffect(() => {
     console.log("App loaded ✅");
@@ -38,6 +75,7 @@ function App() {
     setKeranjang([]);
   };
 
+  // Filter data pakai state "products" dari API/fallback
   const produkTerfilter = products.filter((item) => {
     const cocokNama = item.nama.toLowerCase().includes(cari.toLowerCase());
     const cocokKategori = filterKategori === 'Semua' || item.kategori === filterKategori;
@@ -46,9 +84,13 @@ function App() {
 
   const kategoriUnik = ['Semua', ...new Set(products.map(p => p.kategori))];
 
+  if (loading) return <div style={styles.memuat}>Memuat produk...</div>;
+
   return (
     <div style={styles.wrapper}>
       <h1 style={styles.judulUtama}>🛍️ Mini Product Catalog</h1>
+
+      {error && <div style={styles.peringatan}>{error}</div>}
 
       <input
         type="text"
@@ -76,9 +118,7 @@ function App() {
       </div>
 
       <ProductList produk={produkTerfilter} onTambah={tambahKeKeranjang} />
-
       <CartSidebar keranjang={keranjang} onHapus={hapusDariKeranjang} />
-
       <CheckoutForm keranjang={keranjang} onCheckoutSukses={resetKeranjang} />
     </div>
   );
@@ -131,6 +171,19 @@ const styles = {
     fontWeight: '500',
     cursor: 'pointer',
     transition: 'background 0.2s ease'
+  },
+  memuat: {
+    textAlign: 'center',
+    padding: '50px',
+    fontSize: '18px',
+    color: '#4a5568'
+  },
+  peringatan: {
+    padding: '10px 14px',
+    backgroundColor: '#fef3c7',
+    borderRadius: '8px',
+    marginBottom: '16px',
+    color: '#92400e'
   }
 };
 
