@@ -19,26 +19,28 @@ Proyek ini adalah aplikasi katalog produk berbasis React yang menampilkan daftar
 
 ---
 
-## 📂 Struktur Folder
+## 📁 Struktur Folder
+
+```text
 tugas-halaman-katalog-produk/
 ├── public/
 ├── src/
-│ ├── context/
-│ │ └── CartContext.jsx # Pengelolaan data keranjang
-│ ├── data/
-│ │ └── products.js # Daftar produk lokal
-│ ├── components/
-│ │ ├── ProductCard.jsx # Kartu tampilan setiap produk
-│ │ ├── ProductList.jsx # Daftar semua produk
-│ │ ├── ProductDetail.jsx # Detail produk saat diklik
-│ │ ├── CartSidebar.jsx # Tampilan keranjang belanja
-│ │ └── CheckoutForm.jsx # Formulir pemesanan
-│ ├── App.jsx
-│ └── main.jsx
+│   ├── context/
+│   │   └── CartContext.jsx          # Pengelolaan data keranjang
+│   ├── data/
+│   │   └── products.js              # Daftar produk lokal
+│   ├── components/
+│   │   ├── ProductCard.jsx          # Kartu tampilan setiap produk
+│   │   ├── ProductList.jsx          # Daftar semua produk
+│   │   ├── ProductDetail.jsx        # Detail produk saat diklik
+│   │   ├── CartSidebar.jsx          # Tampilan keranjang belanja
+│   │   └── CheckoutForm.jsx         # Formulir pemesanan
+│   ├── App.jsx
+│   └── main.jsx
 ├── index.html
 ├── package.json
 └── README.md
-plaintext
+```
 
 ---
 
