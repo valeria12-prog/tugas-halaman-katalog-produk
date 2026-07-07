@@ -1,16 +1,19 @@
 import React from 'react';
 import ProductCard from './ProductCard';
 
-const ProductList = ({ produk, onTambah }) => {
+const ProductList = ({ produk, onPilih }) => {
   return (
     <div style={styles.container}>
       {produk.map((item) => (
         <ProductCard
           key={item.id}
+          id={item.id}
           nama={item.nama}
           harga={item.harga}
-          stok={item.stok}
-          onTambah={() => onTambah(item)}
+          kategori={item.kategori}
+          gambar={item.gambar}
+          deskripsi={item.deskripsi}
+          onPilih={() => onPilih(item)}
         />
       ))}
     </div>

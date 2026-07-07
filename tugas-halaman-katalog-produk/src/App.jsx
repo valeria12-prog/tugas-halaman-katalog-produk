@@ -1,126 +1,148 @@
 import React, { useState, useEffect } from 'react';
-// Remove static import, keep as fallback only
+import { CartProvider } from './context/CartContext';
 import { products as fallbackProducts } from './data/products';
 import ProductList from './components/ProductList';
 import CartSidebar from './components/CartSidebar';
 import CheckoutForm from './components/CheckoutForm';
+import ProductDetail from './components/ProductDetail';
 
 function App() {
-  // State untuk data dari API
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [keranjang, setKeranjang] = useState([]);
-  const [cari, setCari] = useState('');
+  const [cariInput, setCariInput] = useState('');
+  const [cariDebounced, setCariDebounced] = useState('');
   const [filterKategori, setFilterKategori] = useState('Semua');
+  const [produkTerpilih, setProdukTerpilih] = useState(null);
+  const [urutkan, setUrutkan] = useState('default');
 
-  // Fetch data dari Fake Store API
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProducts = async () => {
       try {
         const res = await fetch('https://fakestoreapi.com/products');
-        if (!res.ok) throw new Error('Gagal mengambil data produk');
-        const data = await res.json();
+        if (!res.ok) throw new Error('Gagal terhubung ke API');
 
-        // Sesuaikan nama field API agar cocok dengan kode lama
-        const formattedData = data.map(item => ({
+        const apiData = await res.json();
+        const formattedData = apiData.map(item => ({
           id: item.id,
-          nama: item.title,               // API: title → dipakai sebagai "nama"
-          harga: Math.round(item.price * 15000), // Konversi USD ke Rupiah
-          kategori: item.category,        // API: category → dipakai sebagai "kategori"
-          deskripsi: item.description,     // API: description
-          gambar: item.image               // API: image → dipakai sebagai "gambar"
+          nama: item.title,
+          harga: Math.round(item.price * 15000),
+          kategori: item.category,
+          deskripsi: item.description,
+          gambar: item.image
         }));
 
         setProducts(formattedData);
+        setError(null);
       } catch (err) {
         console.error(err);
-        setError('Tidak dapat memuat data dari server, menampilkan data cadangan.');
-        setProducts(fallbackProducts); // Pakai data lama jika API gagal
+        setProducts(fallbackProducts);
+        setError('⚠️ Tidak bisa memuat data dari server, menampilkan data cadangan.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchProducts();
   }, []);
 
   useEffect(() => {
-    console.log("App loaded ✅");
-  }, []);
+    const timer = setTimeout(() => {
+      setCariDebounced(cariInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [cariInput]);
 
   useEffect(() => {
-    document.title = `Keranjang (${keranjang.length}) | Katalog Produk`;
-  }, [keranjang]);
+    document.title = `Katalog | Keranjang (${localStorage.getItem('keranjangBelanja') ? JSON.parse(localStorage.getItem('keranjangBelanja')).length : 0})`;
+  }, []);
 
-  const tambahKeKeranjang = (produk) => {
-    setKeranjang((lama) => {
-      const ada = lama.find(item => item.id === produk.id);
-      if (ada) {
-        return lama.map(item =>
-          item.id === produk.id ? { ...item, jumlah: item.jumlah + 1 } : item
-        );
-      } else {
-        return [...lama, { ...produk, jumlah: 1 }];
-      }
-    });
-  };
-
-  const hapusDariKeranjang = (id) => {
-    setKeranjang((lama) => lama.filter(item => item.id !== id));
-  };
-
-  const resetKeranjang = () => {
-    setKeranjang([]);
-  };
-
-  // Filter data pakai state "products" dari API/fallback
-  const produkTerfilter = products.filter((item) => {
-    const cocokNama = item.nama.toLowerCase().includes(cari.toLowerCase());
+  const produkTerfilter = products.filter(item => {
+    const cocokNama = item.nama.toLowerCase().includes(cariDebounced.toLowerCase());
     const cocokKategori = filterKategori === 'Semua' || item.kategori === filterKategori;
     return cocokNama && cocokKategori;
   });
 
+  const produkTerurut = [...produkTerfilter].sort((a, b) => {
+    if (urutkan === 'termurah') return a.harga - b.harga;
+    if (urutkan === 'termahal') return b.harga - a.harga;
+    if (urutkan === 'nama-az') return a.nama.localeCompare(b.nama);
+    if (urutkan === 'nama-za') return b.nama.localeCompare(a.nama);
+    return 0;
+  });
+
   const kategoriUnik = ['Semua', ...new Set(products.map(p => p.kategori))];
 
-  if (loading) return <div style={styles.memuat}>Memuat produk...</div>;
+  if (loading) {
+    return (
+      <div style={styles.pusat}>
+        <p style={styles.teksInfo}>⏳ Memuat produk...</p>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.wrapper}>
-      <h1 style={styles.judulUtama}>🛍️ Mini Product Catalog</h1>
+    <CartProvider>
+      <div style={styles.wrapper}>
+        <h1 style={styles.judulUtama}>🛍️ Katalog Produk</h1>
 
-      {error && <div style={styles.peringatan}>{error}</div>}
+        {error && <div style={styles.pesanError}>{error}</div>}
 
-      <input
-        type="text"
-        placeholder="🔍 Cari nama produk..."
-        value={cari}
-        onChange={(e) => setCari(e.target.value)}
-        style={styles.inputCari}
-      />
+        <input
+          type="text"
+          placeholder="🔍 Cari nama produk..."
+          value={cariInput}
+          onChange={(e) => setCariInput(e.target.value)}
+          style={styles.inputCari}
+        />
 
-      <div style={styles.filterKategori}>
-        <p style={styles.labelFilter}>Filter Kategori:</p>
-        {kategoriUnik.map((kat) => (
-          <button
-            key={kat}
-            onClick={() => setFilterKategori(kat)}
-            style={{
-              ...styles.tombolKategori,
-              backgroundColor: filterKategori === kat ? '#3182ce' : '#f7fafc',
-              color: filterKategori === kat ? 'white' : '#2d3748'
-            }}
-          >
-            {kat}
-          </button>
-        ))}
+        <div style={styles.barisFilter}>
+          <div style={styles.grupFilter}>
+            <p style={styles.labelFilter}>Kategori:</p>
+            <div style={styles.tombolKategoriContainer}>
+              {kategoriUnik.map(kat => (
+                <button
+                  key={kat}
+                  onClick={() => setFilterKategori(kat)}
+                  style={{
+                    ...styles.tombolKategori,
+                    backgroundColor: filterKategori === kat ? '#3182ce' : '#f7fafc',
+                    color: filterKategori === kat ? 'white' : '#2d3748'
+                  }}
+                >
+                  {kat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.grupUrut}>
+            <label style={styles.labelFilter}>Urutkan:</label>
+            <select
+              value={urutkan}
+              onChange={(e) => setUrutkan(e.target.value)}
+              style={styles.selectUrut}
+            >
+              <option value="default">Standar</option>
+              <option value="termurah">Harga: Termurah</option>
+              <option value="termahal">Harga: Termahal</option>
+              <option value="nama-az">Nama: A - Z</option>
+              <option value="nama-za">Nama: Z - A</option>
+            </select>
+          </div>
+        </div>
+
+        <ProductList produk={produkTerurut} onPilih={setProdukTerpilih} />
+
+        <CartSidebar />
+        <CheckoutForm />
+
+        {produkTerpilih && (
+          <ProductDetail produk={produkTerpilih} onClose={() => setProdukTerpilih(null)} />
+        )}
       </div>
-
-      <ProductList produk={produkTerfilter} onTambah={tambahKeKeranjang} />
-      <CartSidebar keranjang={keranjang} onHapus={hapusDariKeranjang} />
-      <CheckoutForm keranjang={keranjang} onCheckoutSukses={resetKeranjang} />
-    </div>
+    </CartProvider>
   );
 }
 
@@ -129,9 +151,28 @@ const styles = {
     maxWidth: '950px',
     margin: '0 auto',
     padding: '24px',
-    fontFamily: "'Segoe UI', Roboto, sans-serif",
+    fontFamily: 'Arial, sans-serif',
     backgroundColor: '#fafafa',
     minHeight: '100vh'
+  },
+  pusat: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    backgroundColor: '#fafafa'
+  },
+  teksInfo: {
+    fontSize: '18px',
+    color: '#4a5568'
+  },
+  pesanError: {
+    padding: '12px 16px',
+    marginBottom: '20px',
+    backgroundColor: '#fffbeb',
+    color: '#92400e',
+    borderRadius: '8px',
+    border: '1px solid #fbbf24'
   },
   judulUtama: {
     textAlign: 'center',
@@ -147,14 +188,25 @@ const styles = {
     border: '1px solid #e2e8f0',
     marginBottom: '20px',
     boxSizing: 'border-box',
-    outline: 'none',
-    transition: 'border 0.2s ease'
+    outline: 'none'
   },
-  filterKategori: {
-    marginBottom: '24px',
+  barisFilter: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '16px',
+    marginBottom: '24px'
+  },
+  grupFilter: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+    flexWrap: 'wrap'
+  },
+  tombolKategoriContainer: {
+    display: 'flex',
+    gap: '8px',
     flexWrap: 'wrap'
   },
   labelFilter: {
@@ -164,26 +216,25 @@ const styles = {
     color: '#2d3748'
   },
   tombolKategori: {
-    padding: '8px 16px',
+    padding: '8px 14px',
     border: 'none',
     borderRadius: '20px',
     fontSize: '14px',
     fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'background 0.2s ease'
+    cursor: 'pointer'
   },
-  memuat: {
-    textAlign: 'center',
-    padding: '50px',
-    fontSize: '18px',
-    color: '#4a5568'
+  grupUrut: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
   },
-  peringatan: {
-    padding: '10px 14px',
-    backgroundColor: '#fef3c7',
+  selectUrut: {
+    padding: '8px 12px',
+    fontSize: '14px',
     borderRadius: '8px',
-    marginBottom: '16px',
-    color: '#92400e'
+    border: '1px solid #e2e8f0',
+    backgroundColor: 'white',
+    cursor: 'pointer'
   }
 };
 

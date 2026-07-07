@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useCart } from '../context/CartContext';
 
-const CheckoutForm = ({ keranjang, onCheckoutSukses }) => {
+const CheckoutForm = () => {
+  const { keranjang, resetKeranjang } = useCart();
   const [nama, setNama] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState({});
@@ -9,12 +11,9 @@ const CheckoutForm = ({ keranjang, onCheckoutSukses }) => {
     const err = {};
     if (!nama.trim()) err.nama = "Nama tidak boleh kosong";
     else if (nama.trim().length < 3) err.nama = "Nama minimal 3 karakter";
-
     if (!email.trim()) err.email = "Email tidak boleh kosong";
     else if (!email.includes('@')) err.email = "Email harus mengandung tanda @";
-
-    if (keranjang.length === 0) err.keranjang = "Keranjang belanja tidak boleh kosong";
-
+    if (keranjang.length === 0) err.keranjang = "Keranjang tidak boleh kosong";
     setError(err);
     return Object.keys(err).length === 0;
   };
@@ -25,7 +24,7 @@ const CheckoutForm = ({ keranjang, onCheckoutSukses }) => {
       alert("✅ Pesanan berhasil dikirim! Terima kasih telah berbelanja.");
       setNama('');
       setEmail('');
-      onCheckoutSukses();
+      resetKeranjang();
     }
   };
 
@@ -65,11 +64,7 @@ const CheckoutForm = ({ keranjang, onCheckoutSukses }) => {
 
         {error.keranjang && <p style={styles.teksError}>{error.keranjang}</p>}
 
-        <button
-          type="submit"
-          style={styles.tombol}
-          disabled={keranjang.length === 0}
-        >
+        <button type="submit" style={styles.tombol} disabled={keranjang.length === 0}>
           ✅ Proses Checkout
         </button>
       </form>
@@ -79,12 +74,14 @@ const CheckoutForm = ({ keranjang, onCheckoutSukses }) => {
 
 const styles = {
   container: {
+    maxWidth: '950px',
+    margin: '24px auto',
     background: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '16px',
     padding: '24px',
-    margin: '24px 0',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+    boxSizing: 'border-box'
   },
   judul: {
     fontSize: '20px',
@@ -110,8 +107,7 @@ const styles = {
     padding: '12px 14px',
     borderRadius: '10px',
     fontSize: '15px',
-    outline: 'none',
-    transition: 'border 0.2s ease'
+    outline: 'none'
   },
   teksError: {
     margin: '2px 0 0 0',
@@ -134,8 +130,7 @@ const styles = {
     color: 'white',
     fontSize: '16px',
     fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'background 0.2s ease'
+    cursor: 'pointer'
   }
 };
 
